@@ -8,40 +8,70 @@ from PIL import Image
 import shutil
 import os
 import csv
+from datetime import datetime
 
 totalKnownFaces=0
 totalUnknownFaces=0
 knownNames =[]
 
-def mark_present_in_csv(name):
-    # Path to the CSV file
-    csv_file_path = "attendance.csv"
+def nameFormat(names):
+    namesNew = []
+    for name in names:
+        newName = name.replace('.png', '').replace('.jpg', '').replace('_',' ').lower()
+        namesNew.append(newName[:-1])
+    return namesNew
 
-    # Check if the CSV file exists, otherwise create it with headers
-    if not os.path.exists(csv_file_path):
-        with open(csv_file_path, 'w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["Name", "Attendance"])
+# Example usage:
+names = ["image1.jpg", "image2.jpg", "image3.jpg"]
+formatted_names = nameFormat(names)
+print(formatted_names)
 
-    # Check if the user's name is already in the CSV file
-    with open(csv_file_path, 'r') as file:
-        reader = csv.reader(file)
+
+def mark_present_in_csv(knownNames, subject_chosen):
+    
+    
+    today_date = datetime.today().strftime('%d/%m/%Y')
+    #get current directory
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    #construct file path to attendance.csv
+    csv_file_path = os.path.join(current_directory, 'attendance', f'{subject_chosen}.csv')
+
+
+    # Read the CSV file into a list of dictionaries
+    with open(csv_file_path, 'r', newline='') as file:
+        reader = csv.DictReader(file)
         rows = list(reader)
-        for row in rows[1:]:  # Skip header row
-            if row[0] == name:
-                # If the name is found, mark present and write to file
-                row[1] = "P"
-                break
+
+    # Update the attendance status based on knownNames list
+    for row in rows:
+        # Extract name from the row
+        csv_name = row['Name']
+        
+        # Remove underscores from the names for comparison
+        csv_name_lower = csv_name.lower()
+        # print(csv_name_lower)
+        # knownNames_no_underscore = [nameFormat(name).lower() for name in knownNames]
+        # for x in knownNames_no_underscore:
+        #     print(x)
+        knownNames_new = nameFormat(knownNames)
+        
+        
+        # Check if the name in the CSV row is exactly in knownNames
+        if csv_name_lower in knownNames_new:
+            row[today_date] = 'P'  # Mark present under today's date
         else:
-            # If the name is not found, add a new row
-            rows.append([name, "P"])
+            row[today_date] = 'A'  # Mark absent under today's date
+
+
+    header = reader.fieldnames + [today_date]   # Update the header with today's date
 
     # Write the updated rows back to the CSV file
     with open(csv_file_path, 'w', newline='') as file:
-        writer = csv.writer(file)
+        writer = csv.DictWriter(file, fieldnames=header)
+        writer.writeheader()
         writer.writerows(rows)
 
-def faceRecognition(input_image):
+def faceRecognition(input_image, subject_chosen):
 
     global totalKnownFaces
     global totalUnknownFaces
@@ -109,7 +139,7 @@ def faceRecognition(input_image):
                 knownNames.append(name)
                 shutil.copy(img_path, known_faces_path)
                 # mark as present in file
-                mark_present_in_csv(name)
+                # mark_present_in_csv(name)
             else:
                 # If no face is recognized, set name to 'unknown'
                 name = 'unknown'
@@ -120,7 +150,7 @@ def faceRecognition(input_image):
                 shutil.copy(img_path, unknown_faces_path)
                 
             extracted_names.append(name)
-            
+    mark_present_in_csv(knownNames, subject_chosen)        
     return extracted_names
 
 def getKnownName():
@@ -194,9 +224,9 @@ def faceDetection(uploaded_file):
     img.save(temp_image_path, format="JPEG")
 
     # Delete database/representations_facenet512.pkl file if it exists
-    representations_file = os.path.join("database", "representations_facenet512.pkl")
-    if os.path.exists(representations_file):
-        os.remove(representations_file)
+    # representations_file = os.path.join("database", "representations_facenet512.pkl")
+    # if os.path.exists(representations_file):
+    #     os.remove(representations_file)
 
     # Use the Ultralytics model
     model = YOLO('best.pt')
