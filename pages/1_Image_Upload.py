@@ -1,3 +1,5 @@
+#1_image_upload
+
 import streamlit as st
 from PIL import Image
 from identify2 import *

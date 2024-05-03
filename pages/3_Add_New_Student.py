@@ -1,3 +1,5 @@
+#3_add_new_student.py
+
 import os
 import streamlit as st
 import csv
@@ -29,6 +31,8 @@ def add_student_to_csv(name, ktu, rollno):
     fr_directory = os.path.dirname(current_directory)
 
     subjects = ['CD', 'AAD', 'CGIP', 'PY', 'IEFT']
+    student_added = False
+    
     for subject in subjects:
         csv_file_path = os.path.join(fr_directory, 'attendance', f'{subject}.csv')
         existing_dates = get_existing_dates(csv_file_path)
@@ -52,6 +56,8 @@ def add_student_to_csv(name, ktu, rollno):
             existing_dates_count = len(existing_dates)
             row += ['A'] * existing_dates_count
             writer.writerow(row)
+            student_added = True
+    return student_added
 
 def get_existing_dates(csv_file_path):
     with open(csv_file_path, 'r') as csvfile:
@@ -106,6 +112,11 @@ def get_next_slno(csv_file_path):
 #             writer.writerow(row)
             
 
+def delete_representations():
+    representations_file = os.path.join("database", "representations_facenet512.pkl")
+    if os.path.exists(representations_file):
+        os.remove(representations_file)
+
 def main():
     st.title("Add New Student")
 
@@ -124,7 +135,11 @@ def main():
 
             if uploaded_files:
                 save_student_pics(name, uploaded_files)
-                add_student_to_csv(name, ktu_rollno, class_rollno)
+                student_added = add_student_to_csv(name, ktu_rollno, class_rollno)
+                
+                if student_added:
+                    st.success("Student added successfully.")
+                    delete_representations()
 
             st.success("Student added successfully.")
 
